@@ -1,5 +1,33 @@
 import cv2
 import numpy as np
+import os
+
+class DataExtractor():
+
+    def __init__(self, infolder, outfolder, dataname):
+        self.supported_files = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', 'tif')
+        self.datapath = os.path.join(outfolder, dataname)
+        self.__dict__.update(locals())
+        self.index = 0
+
+    def get_rois(self):
+        for root, dirs, files in os.walk(self.infolder):
+            image_paths = [file for file in files if file.lower().endswith(self.supported_files)]
+            for impath in image_paths:
+                self.get_rois_from_img(impath)
+
+    def get_rois_from_img(self, path):
+        img = cv2.imread(path)
+        rois = []
+        rect = cv2.selectROI('Select Region', img, showCrosshair=False, fromCenter=False)
+        while rect != (0, 0, 0, 0):
+            x, y, w, h = rect
+            roi = img[x:x+w, y:y+h]
+            cv2.imwrite(self.datapath+'_{}.png'.format(self.index), roi)
+            self.index += 1
+            rect = cv2.selectROI('Select Region', img, showCrosshair=False, fromCenter=False)
+
+
 
 if __name__ == '__main__':
     img = cv2.imread('scanned_books/pngs/turbo_left/turbo_left (4).png')
