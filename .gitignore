@@ -1,2 +1,12 @@
-scanned_books/*
 *.swp
+*.jpg
+*.pdf
+*.png
+*.psd
+*.tif
+*.iml
+*.xml
+animation_program/*
+scanned_books/*
+./.idea/*
+
