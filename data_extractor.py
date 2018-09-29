@@ -49,7 +49,7 @@ class DataExtractor():
 
 if __name__ == '__main__':
     extractor = DataExtractor(
-        infolder="/media/jeff/DATA/drawnet/animation_program/nokbak_characters",
+        infolder="/media/jeff/DATA/drawnet/animation_program/nokbak_env",
         outfolder="/media/jeff/DATA/drawnet/extracted_art/nokbak",
         dataname="nokbak_concepts"
     )

@@ -97,8 +97,8 @@ def draw_circle(event, x, y, flags, param):
 if __name__=='__main__':
 
     gcp = GrabCutPainter(
-        infolder='/home/hiltonjp/sample',
-        outfolder='/home/hiltonjp/drawnet/cut'
+        infolder='/media/jeff/DATA/drawnet/sample',
+        outfolder='/media/jeff/DATA/drawnet/cut'
     )
 
     gcp.grabcut()
