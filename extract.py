@@ -7,7 +7,6 @@ class DataExtractor():
         self.__dict__.update(locals())
         self.supported_files = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', 'tif')
         self.datapath = os.path.join(outfolder, dataname)
-        print(self.datapath)
         self.index = 0
 
         # count up previously gathered data
