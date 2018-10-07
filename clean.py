@@ -22,13 +22,10 @@ class ImageCleaner:
 
         image: The crop of the current image
         mask: The mask of the current image
-        canvas: The drawing canvas
         preview: A preview of the extraction results
         background: The background to paste extraction results against
-        layout: Side-by-side display of canvas and extraction results
 
         display_scale: the zoom level of the side-by-side display
-
         brush_size: the size of the brush used in drawing hints
 
     """
@@ -46,11 +43,9 @@ class ImageCleaner:
     # Drawing canvases
     image = None        # Cropped image (used for redrawing canvas/preview)
     mask = None         #
-    canvas = None       # Scratch canvas (left side of display)
     preview = None      # GrabCut preview (right side of display)
     background = None   # background color (used to redraw preview)
 
-    layout = None       # display for drawing hints
 
     # some scalable values
     display_scale = 1
@@ -103,9 +98,8 @@ class ImageCleaner:
 
     def clean(self, raw_image):
         """Clean one image from the dataset by cropping it and iteratively extracting foreground elements"""
-
         # Scale of display image (display = 1/scale)
-        self.display_scale = 1
+        ImageCleaner.display_scale = 1
 
         # rect = (x, y, width, height)
         rect = self.__get_roi(raw_image)
@@ -113,13 +107,14 @@ class ImageCleaner:
             return raw_image
 
         # set image of interest
-        self.image = raw_image[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
-        self.background = np.full_like(ImageCleaner.image, 255, dtype=np.uint8)
+        ImageCleaner.image = raw_image[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
+        ImageCleaner.image = self.__scale_image(ImageCleaner.image)
+        ImageCleaner.background = np.full_like(ImageCleaner.image, 1, dtype=np.float32)
 
         # initialize "potential FG" rectangle, mask, and model arrays for grabcut algoithm
         self.__init_grabcut()
-        self.mask, self._bgd_model, self._fgd_model = cv2.grabCut(
-            img=self.image,
+        ImageCleaner.mask, self._bgd_model, self._fgd_model = cv2.grabCut(
+            img=ImageCleaner.image,
             mask=self.mask,
             rect=self._gc_rect,
             bgdModel=self._bgd_model,
@@ -128,7 +123,9 @@ class ImageCleaner:
             mode=cv2.GC_INIT_WITH_RECT
         )
 
-        ImageCleaner.canvas = ImageCleaner.image.copy()
+
+        ImageCleaner.image = ImageCleaner.image.astype('float32') / 255
+        # ImageCleaner.canvas = ImageCleaner.image.copy()
         self.redraw()
 
         cv2.namedWindow(self._gc_window_name)
@@ -137,17 +134,28 @@ class ImageCleaner:
         # Display loop
         finished = False
         while not finished:
-            cv2.imshow(self._gc_window_name, ImageCleaner.layout)
+            scale = ImageCleaner.display_scale
+            cv2.imshow(self._gc_window_name, ImageCleaner.preview[::scale, ::scale])
             finished = self.__key_events(cv2.waitKey(20))
 
         cv2.destroyAllWindows()
-
-        clean_image = self.preview
+        
+        ImageCleaner.display_scale = 1
+        ImageCleaner.redraw(min_alpha=0)
+        clean_image = (ImageCleaner.preview*255).astype('uint8')
         return clean_image
 
-    ####################################################################################################################
-    # PRIVATE METHODS                                                                                                  #
-    ####################################################################################################################
+    ######################################################################################
+    # PRIVATE METHODS                                                                    #
+    ######################################################################################
+    def __scale_image(self, image):
+        y, x, _ = image.shape
+
+        while x*y > 1000000:
+            image = cv2.resize(image, dsize=(x//4*3, y//4*3), interpolation=cv2.INTER_CUBIC)
+            y, x, _ = image.shape 
+
+        return image
 
     def __get_roi(self, image):
         """Prompt user to select a rectangular region of interest"""
@@ -170,7 +178,7 @@ class ImageCleaner:
     def __init_grabcut(self):
         """Initialize grabcut algorithm variables"""
 
-        ImageCleaner.mask = np.zeros(ImageCleaner.image.shape[:2], dtype=np.uint8)
+        ImageCleaner.mask = np.zeros(ImageCleaner.image.shape[:2], dtype=np.float32)
 
         frame = 1
 
@@ -190,7 +198,8 @@ class ImageCleaner:
         z_key = 122
         x_key = 120
         esc_key = 27
-
+        w_key = 119
+        s_key = 115 
         finished = False
 
         if key == enter_key:
@@ -198,6 +207,7 @@ class ImageCleaner:
 
             cv2.destroyWindow(self._gc_window_name)
 
+            ImageCleaner.image = (ImageCleaner.image * 255).astype('uint8')
             ImageCleaner.mask, self._bgd_model, self._fgd_model = cv2.grabCut(
                 img=ImageCleaner.image,
                 mask=ImageCleaner.mask,
@@ -207,8 +217,9 @@ class ImageCleaner:
                 iterCount=self._gc_iters,
                 mode=cv2.GC_INIT_WITH_MASK
             )
+            ImageCleaner.image = ImageCleaner.image.astype('float32') / 255
 
-            ImageCleaner.canvas = ImageCleaner.image.copy()
+            # ImageCleaner.canvas = ImageCleaner.image.copy()
             ImageCleaner.redraw()
 
             cv2.namedWindow(self._gc_window_name)
@@ -222,6 +233,13 @@ class ImageCleaner:
         elif num_key_1 <= key <= num_key_9:
             ImageCleaner.display_scale = key - 48
 
+        elif key == w_key:
+            ImageCleaner.display_scale += 1 if ImageCleaner.display_scale < 9 else 0
+            print(ImageCleaner.display_scale)
+
+        elif key == s_key:
+            ImageCleaner.display_scale -= 1 if ImageCleaner.display_scale > 1 else 0
+            print(ImageCleaner.display_scale)
         # Toggle FG/BG painting
         elif key == m_key:
             ImageCleaner.draw_bg = False if ImageCleaner.draw_bg else True
@@ -238,6 +256,9 @@ class ImageCleaner:
         elif key == esc_key:
             raise ExitException()
 
+        elif key != -1:
+            print(key)
+
         return finished
 
     ####################################################################################################################
@@ -248,21 +269,20 @@ class ImageCleaner:
     def __rescale_for_image(image):
         # determine appropriate image scaling automatically
         imheight, imwidth = image.shape[:2]
-
-        monitor = get_monitors()[0]
+        # monitor = get_monitors()[0]
 
         # in case 1st monitor is tipped longways
-        if monitor.height > monitor.width:
-            monitor = get_monitors()[1]
+        # if monitor.height > monitor.width:
+            # monitor = get_monitors()[1]
 
-        monwidth, monheight = monitor.width, monitor.height
+        monwidth, monheight = 1920, 930
 
         scale = 1
         while imwidth > monwidth or imheight > monheight:
             scale += 1
             imwidth, imheight = imwidth//scale, imheight//scale
 
-        ImageCleaner.display_scale = scale
+        # ImageCleaner.display_scale = scale
         return scale
 
     @staticmethod
@@ -276,15 +296,6 @@ class ImageCleaner:
         if ImageCleaner.drawing and event == cv2.EVENT_MOUSEMOVE:
             filled = -1
             if ImageCleaner.draw_bg:
-                # paint display image
-                cv2.circle(
-                    img=ImageCleaner.canvas,
-                    center=(x, y),
-                    radius=ImageCleaner.brush_size,
-                    color=(0, 0, 0),
-                    thickness=filled,
-                )
-
                 # paint temp mask
                 cv2.circle(
                     img=ImageCleaner.mask,
@@ -294,15 +305,6 @@ class ImageCleaner:
                     thickness=filled,
                 )
             else:
-                # paint display image
-                cv2.circle(
-                    img=ImageCleaner.canvas,
-                    center=(x, y),
-                    radius=ImageCleaner.brush_size,
-                    color=(255, 0, 0),
-                    thickness=filled,
-                )
-
                 # paint temp mask
                 cv2.circle(
                     img=ImageCleaner.mask,
@@ -322,25 +324,22 @@ class ImageCleaner:
             ImageCleaner.drawing = False
 
     @staticmethod
-    def redraw():
+    def redraw(min_alpha=0.125):
         """Redraw the display"""
-        alpha_fg = np.where((ImageCleaner.mask == 2) | (ImageCleaner.mask == 0), 0, 1).astype('uint8')
+        alpha_fg = np.where((ImageCleaner.mask == 2) | (ImageCleaner.mask == 0), min_alpha, 1).astype('float32')
         alpha_bg = 1 - alpha_fg
-
-        # initialize drawing canvas and grabcut preview
-        ImageCleaner.preview = alpha_fg[:, :, axis] * ImageCleaner.image + alpha_bg[:, :, axis] * ImageCleaner.background
-
         scale = ImageCleaner.display_scale
-        ImageCleaner.layout = np.concatenate((ImageCleaner.canvas[::scale, ::scale], ImageCleaner.preview[::scale, ::scale]), axis=1)
-
+        
+        ImageCleaner.preview = alpha_fg[:, :, axis] * ImageCleaner.image \
+            + alpha_bg[:, :, axis] * ImageCleaner.background
 
 if __name__ == '__main__':
 
     cleaner = ImageCleaner()
 
     cleaner.clean_folder(
-        src_folder='/media/hiltonjp/DATA/drawnet/sample',
-        dst_folder='/media/hiltonjp/DATA/drawnet/cut'
+        src_folder='/media/hiltonjp/DATA/drawnet/extracted_art/avast_ye',
+        dst_folder='/media/hiltonjp/DATA/drawnet/cleaned_art/avast_ye'
         # src_folder='/media/jeff/DATA/drawnet/sample',
         # dst_folder='/media/jeff/DATA/drawnet/cut'
     )
