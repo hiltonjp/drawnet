@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import os
 
+from argparse import ArgumentParser
 from numpy import newaxis as axis
-from screeninfo import get_monitors
 
 
 class ExitException(BaseException):
@@ -30,9 +30,9 @@ class ImageCleaner:
 
     """
 
-    ####################################################################################################################
-    # STATIC VARIABLES                                                                                                 #
-    ####################################################################################################################
+    ###########################################################################
+    # STATIC VARIABLES                                                        #
+    ###########################################################################
 
     supported_files = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tif')
 
@@ -51,9 +51,9 @@ class ImageCleaner:
     display_scale = 1
     brush_size = 16
 
-    ####################################################################################################################
-    # INITIALIZATION                                                                                                   #
-    ####################################################################################################################
+    ###########################################################################
+    # INITIALIZATION                                                          #
+    ###########################################################################
 
     def __init__(self):
         # for grabcut algorithm
@@ -66,9 +66,9 @@ class ImageCleaner:
         self._roi_window_name = "Select Region of Interest"
         self._gc_window_name = "Draw Hints"
 
-    ####################################################################################################################
-    # PUBLIC METHODS                                                                                                   #
-    ####################################################################################################################
+    ###########################################################################
+    # PUBLIC METHODS                                                          #
+    ###########################################################################
 
     def clean_folder(self, src_folder, dst_folder=None):
         """Clean a folder of images"""
@@ -102,6 +102,7 @@ class ImageCleaner:
         ImageCleaner.display_scale = 1
 
         # rect = (x, y, width, height)
+        print(raw_image.shape)
         rect = self.__get_roi(raw_image)
         if rect is None:
             return raw_image
@@ -161,9 +162,11 @@ class ImageCleaner:
         """Prompt user to select a rectangular region of interest"""
 
         scale = self.__rescale_for_image(image)
+        image2 =image[::scale, ::scale]
+        print(image2.shape)
         rect = cv2.selectROI(
             windowName=self._roi_window_name,
-            img=image[::scale, ::scale],
+            img=image2,
             showCrosshair=False,
             fromCenter=False
         )
@@ -261,28 +264,22 @@ class ImageCleaner:
 
         return finished
 
-    ####################################################################################################################
-    # STATIC METHODS                                                                                                   #
-    ####################################################################################################################
+    ###############################################################################################
+    # STATIC METHODS                                                                              #
+    ###############################################################################################
 
     @staticmethod
     def __rescale_for_image(image):
         # determine appropriate image scaling automatically
+
         imheight, imwidth = image.shape[:2]
-        # monitor = get_monitors()[0]
 
-        # in case 1st monitor is tipped longways
-        # if monitor.height > monitor.width:
-            # monitor = get_monitors()[1]
-
-        monwidth, monheight = 1920, 930
+        monwidth, monheight = 1920, 900
 
         scale = 1
-        while imwidth > monwidth or imheight > monheight:
+        while imwidth//scale > monwidth or imheight//scale > monheight:
             scale += 1
-            imwidth, imheight = imwidth//scale, imheight//scale
 
-        # ImageCleaner.display_scale = scale
         return scale
 
     @staticmethod
@@ -335,11 +332,17 @@ class ImageCleaner:
 
 if __name__ == '__main__':
 
+    parser = ArgumentParser()
+    parser.add_argument('src', type=str, help='source folder')
+    parser.add_argument('dst', type=str, help='destination folder')
+
+    args = parser.parse_args()
+
     cleaner = ImageCleaner()
 
     cleaner.clean_folder(
-        src_folder='/media/hiltonjp/DATA/drawnet/extracted_art/avast_ye',
-        dst_folder='/media/hiltonjp/DATA/drawnet/cleaned_art/avast_ye'
+        src_folder=args.src,
+        dst_folder=args.dst
         # src_folder='/media/jeff/DATA/drawnet/sample',
         # dst_folder='/media/jeff/DATA/drawnet/cut'
     )

@@ -48,23 +48,14 @@ class DrawNet(nn.Module):
         image8, mask8, motif8 = self.down8(image7, mask7, motif7)
 
         # decode
-        print("up 1")
         image9, mask9, motif9 = self.up1(image8, mask8, motif8, image7, mask7, motif7)
-        print("up 2")
         image10, mask10, motif10 = self.up2(image9, mask9, motif9, image6, mask6, motif6)
-        print("up 3")
         image11, mask11, motif11 = self.up3(image10, mask10, motif10, image5, mask5, motif5)
-        print("up 4")
         image12, mask12, motif12 = self.up4(image11, mask11, motif11, image4, mask4, motif4)
-        print("up 5")
         image13, mask13, motif13 = self.up5(image12, mask12, motif12, image3, mask3, motif3)
-        print("up 6")
         image14, mask14, motif14 = self.up6(image13, mask13, motif13, image2, mask2, motif2)
-        print("up 7")
         image15, mask15, motif15 = self.up7(image14, mask14, motif14, image1, mask1, motif1)
-        print("up 8")
         image16, mask16, motif16 = self.up8(image15, mask15, motif15, image, mask, motif)
-        print("up 9")
 
         return image16
 
