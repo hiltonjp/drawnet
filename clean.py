@@ -71,7 +71,12 @@ class ImageCleaner:
     ###########################################################################
 
     def clean_folder(self, src_folder, dst_folder=None):
-        """Clean a folder of images"""
+        """
+
+        :param src_folder: Folder to pull
+        :param dst_folder:
+        :return:
+        """
         print(dst_folder)
         if dst_folder is None:
             dst_folder = src_folder
