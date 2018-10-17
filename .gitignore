@@ -6,6 +6,6 @@
 *.tif
 *.iml
 *.xml
-./data
+./data/*
 ./.idea/*
 
