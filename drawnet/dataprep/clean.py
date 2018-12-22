@@ -14,6 +14,14 @@ class ExitException(BaseException):
 class ImageCleaner:
     """ Class for removing background elements from an image dataset
 
+    Notes:
+        This class utilizes the OpenCV built-in implementation of the GrabCut algorithm.
+
+        For each image in the folder, the user will be prompted to crop a region of interest from the image. The
+        algorithm will make an attempt at cutting away background pixels, and then display the initial
+        results. The user is then free to paint foreground and background 'hints' and rerun the GrabCut algorithm
+        as necessary until the foreground is fully extracted.
+
     Static Variables:
         supported_files:  a set of common image file extensions (for sorting out non-images from folder search)
 
@@ -70,13 +78,14 @@ class ImageCleaner:
     # PUBLIC METHODS                                                          #
     ###########################################################################
 
-    def clean_folder(self, src_folder, dst_folder=None):
+    def clean_folder(self, src_folder, dst_folder):
+        """Clean through a folder of images.
+
+        Args:
+            src_folder (str): The path to a folder of images. The function will search through all sub-folders.
+            dst_folder (str): The destination for cleaned images.
         """
 
-        :param src_folder: Folder to pull
-        :param dst_folder:
-        :return:
-        """
         print(dst_folder)
         if dst_folder is None:
             dst_folder = src_folder
@@ -102,7 +111,15 @@ class ImageCleaner:
             return
 
     def clean(self, raw_image):
-        """Clean one image from the dataset by cropping it and iteratively extracting foreground elements"""
+        """Clean one image from the dataset.
+
+        Args:
+            raw_image (np.ndarray): A numpy array of shape (h, w, 3) representing an image to be cleaned up.
+
+        Returns:
+            (np.ndarray): A cropped numpy array containing the cleaned image data.
+        """
+
         # Scale of display image (display = 1/scale)
         ImageCleaner.display_scale = 1
 
@@ -154,6 +171,7 @@ class ImageCleaner:
     ######################################################################################
     # PRIVATE METHODS                                                                    #
     ######################################################################################
+
     def __scale_image(self, image):
         y, x, _ = image.shape
 
@@ -243,11 +261,10 @@ class ImageCleaner:
 
         elif key == w_key:
             ImageCleaner.display_scale += 1 if ImageCleaner.display_scale < 9 else 0
-            print(ImageCleaner.display_scale)
 
         elif key == s_key:
             ImageCleaner.display_scale -= 1 if ImageCleaner.display_scale > 1 else 0
-            print(ImageCleaner.display_scale)
+
         # Toggle FG/BG painting
         elif key == m_key:
             ImageCleaner.draw_bg = False if ImageCleaner.draw_bg else True
@@ -289,7 +306,8 @@ class ImageCleaner:
 
     @staticmethod
     def draw(event, x, y, flags, param):
-        """Image drawing callback"""
+        """Image drawing callback."""
+
         # Scale x and y up to correct size for mask painting
         # (accounts for display image scaling)
         scale = ImageCleaner.display_scale
@@ -334,6 +352,7 @@ class ImageCleaner:
         
         ImageCleaner.preview = alpha_fg[:, :, axis] * ImageCleaner.image \
             + alpha_bg[:, :, axis] * ImageCleaner.background
+
 
 if __name__ == '__main__':
 

@@ -3,7 +3,43 @@ import torch.nn as nn
 import torch.nn.functional as f
 
 
-class GeneratorLoss(nn.Module):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class OldGeneratorLoss(nn.Module):
     """Combined loss over image and features"""
     
     def __init__(self, 
@@ -32,7 +68,7 @@ class GeneratorLoss(nn.Module):
 
         composite = mask*original + (1-mask)*generated
 
-        _, org_feats = self.discriminator(original)
+        org_conf, org_feats = self.discriminator(original)
         gen_conf, gen_feats = self.discriminator(generated)
         cmp_conf, cmp_feats = self.discriminator(composite)
 
@@ -69,7 +105,7 @@ class GeneratorLoss(nn.Module):
 
         return loss
 
-class DiscriminatorLoss(nn.Module):
+class OldDiscriminatorLoss(nn.Module):
     """Loss designed to measure discriminator performance."""
 
     def __init__(self, confidence=1, feats=1e-4):
