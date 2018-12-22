@@ -12,7 +12,6 @@ class DrawNet(nn.Module):
 
     def __init__(self):
         super(DrawNet, self).__init__()
-        # x, _ = dataset[0]
         input = 3
         output = 3
 
@@ -28,8 +27,8 @@ class DrawNet(nn.Module):
         self.up2 = Up(128+128, 128, (3, 3), padding=(1, 1))     # 6     4
         self.up3 = Up(128+128, 128, (3, 3), padding=(1, 1))     # 5     8
         self.up4 = Up(128+64, 64, (3, 3), padding=(1, 1))       # 4     16
-        self.up5 = Up(64+64, 64, (3, 3), padding=(1, 1))       # 3     32
-        self.up6 = Up(64+32, 32, (5, 5), padding=(2, 2))       # 2     64
+        self.up5 = Up(64+64, 64, (3, 3), padding=(1, 1))        # 3     32
+        self.up6 = Up(64+32, 32, (5, 5), padding=(2, 2))        # 2     64
         self.up7 = Up(32+32, 32, (5, 5), padding=(2, 2))        # 1     128
         self.up8 = Up(32+3, output, (7, 7), padding=(3, 3))     # 0     256
 
@@ -48,23 +47,14 @@ class DrawNet(nn.Module):
         image8, mask8, motif8 = self.down8(image7, mask7, motif7)
 
         # decode
-        print("up 1")
         image9, mask9, motif9 = self.up1(image8, mask8, motif8, image7, mask7, motif7)
-        print("up 2")
         image10, mask10, motif10 = self.up2(image9, mask9, motif9, image6, mask6, motif6)
-        print("up 3")
         image11, mask11, motif11 = self.up3(image10, mask10, motif10, image5, mask5, motif5)
-        print("up 4")
         image12, mask12, motif12 = self.up4(image11, mask11, motif11, image4, mask4, motif4)
-        print("up 5")
         image13, mask13, motif13 = self.up5(image12, mask12, motif12, image3, mask3, motif3)
-        print("up 6")
         image14, mask14, motif14 = self.up6(image13, mask13, motif13, image2, mask2, motif2)
-        print("up 7")
         image15, mask15, motif15 = self.up7(image14, mask14, motif14, image1, mask1, motif1)
-        print("up 8")
         image16, mask16, motif16 = self.up8(image15, mask15, motif15, image, mask, motif)
-        print("up 9")
 
         return image16
 
@@ -168,9 +158,9 @@ class PartialConv(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.from_numpy(np.random.randn(10, 3, 256, 256)).float()
-    mask = torch.from_numpy(np.random.randn(10, 1, 256, 256)).float()
-    motif = torch.from_numpy(np.random.randn(10, 1, 256, 256)).float()
+    x = torch.from_numpy(np.random.randn(4, 3, 128, 128)).float()
+    mask = torch.from_numpy(np.random.randn(4, 1, 128, 128)).float()
+    motif = torch.from_numpy(np.random.randn(4, 1, 128, 128)).float()
     mask = (mask > 3).float()
     mask = torch.cat((mask, mask, mask), 1)
     motif = torch.cat((motif, motif, motif), 1)
@@ -192,4 +182,6 @@ if __name__ == '__main__':
     print(np.sum([np.prod(p.size()) for p in net.parameters()]))
     y = net(x, mask, motif)
     plt.imshow(x)
+    plt.show()
     plt.imshow(y)
+    plt.show()

@@ -6,7 +6,10 @@
 *.tif
 *.iml
 *.xml
-animation_program/*
-scanned_books/*
+*.zip
+*.fbx
+*.xml
+dnnutil/
+./data/*
 ./.idea/*
 

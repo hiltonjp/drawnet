@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import os
 
+from argparse import ArgumentParser
 from numpy import newaxis as axis
-from screeninfo import get_monitors
 
 
 class ExitException(BaseException):
@@ -13,6 +13,14 @@ class ExitException(BaseException):
 
 class ImageCleaner:
     """ Class for removing background elements from an image dataset
+
+    Notes:
+        This class utilizes the OpenCV built-in implementation of the GrabCut algorithm.
+
+        For each image in the folder, the user will be prompted to crop a region of interest from the image. The
+        algorithm will make an attempt at cutting away background pixels, and then display the initial
+        results. The user is then free to paint foreground and background 'hints' and rerun the GrabCut algorithm
+        as necessary until the foreground is fully extracted.
 
     Static Variables:
         supported_files:  a set of common image file extensions (for sorting out non-images from folder search)
@@ -30,9 +38,9 @@ class ImageCleaner:
 
     """
 
-    ####################################################################################################################
-    # STATIC VARIABLES                                                                                                 #
-    ####################################################################################################################
+    ###########################################################################
+    # STATIC VARIABLES                                                        #
+    ###########################################################################
 
     supported_files = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tif')
 
@@ -51,9 +59,9 @@ class ImageCleaner:
     display_scale = 1
     brush_size = 16
 
-    ####################################################################################################################
-    # INITIALIZATION                                                                                                   #
-    ####################################################################################################################
+    ###########################################################################
+    # INITIALIZATION                                                          #
+    ###########################################################################
 
     def __init__(self):
         # for grabcut algorithm
@@ -66,12 +74,18 @@ class ImageCleaner:
         self._roi_window_name = "Select Region of Interest"
         self._gc_window_name = "Draw Hints"
 
-    ####################################################################################################################
-    # PUBLIC METHODS                                                                                                   #
-    ####################################################################################################################
+    ###########################################################################
+    # PUBLIC METHODS                                                          #
+    ###########################################################################
 
-    def clean_folder(self, src_folder, dst_folder=None):
-        """Clean a folder of images"""
+    def clean_folder(self, src_folder, dst_folder):
+        """Clean through a folder of images.
+
+        Args:
+            src_folder (str): The path to a folder of images. The function will search through all sub-folders.
+            dst_folder (str): The destination for cleaned images.
+        """
+
         print(dst_folder)
         if dst_folder is None:
             dst_folder = src_folder
@@ -97,11 +111,20 @@ class ImageCleaner:
             return
 
     def clean(self, raw_image):
-        """Clean one image from the dataset by cropping it and iteratively extracting foreground elements"""
+        """Clean one image from the dataset.
+
+        Args:
+            raw_image (np.ndarray): A numpy array of shape (h, w, 3) representing an image to be cleaned up.
+
+        Returns:
+            (np.ndarray): A cropped numpy array containing the cleaned image data.
+        """
+
         # Scale of display image (display = 1/scale)
         ImageCleaner.display_scale = 1
 
         # rect = (x, y, width, height)
+        print(raw_image.shape)
         rect = self.__get_roi(raw_image)
         if rect is None:
             return raw_image
@@ -148,6 +171,7 @@ class ImageCleaner:
     ######################################################################################
     # PRIVATE METHODS                                                                    #
     ######################################################################################
+
     def __scale_image(self, image):
         y, x, _ = image.shape
 
@@ -161,9 +185,11 @@ class ImageCleaner:
         """Prompt user to select a rectangular region of interest"""
 
         scale = self.__rescale_for_image(image)
+        image2 =image[::scale, ::scale]
+        print(image2.shape)
         rect = cv2.selectROI(
             windowName=self._roi_window_name,
-            img=image[::scale, ::scale],
+            img=image2,
             showCrosshair=False,
             fromCenter=False
         )
@@ -235,11 +261,10 @@ class ImageCleaner:
 
         elif key == w_key:
             ImageCleaner.display_scale += 1 if ImageCleaner.display_scale < 9 else 0
-            print(ImageCleaner.display_scale)
 
         elif key == s_key:
             ImageCleaner.display_scale -= 1 if ImageCleaner.display_scale > 1 else 0
-            print(ImageCleaner.display_scale)
+
         # Toggle FG/BG painting
         elif key == m_key:
             ImageCleaner.draw_bg = False if ImageCleaner.draw_bg else True
@@ -261,33 +286,28 @@ class ImageCleaner:
 
         return finished
 
-    ####################################################################################################################
-    # STATIC METHODS                                                                                                   #
-    ####################################################################################################################
+    ###############################################################################################
+    # STATIC METHODS                                                                              #
+    ###############################################################################################
 
     @staticmethod
     def __rescale_for_image(image):
         # determine appropriate image scaling automatically
+
         imheight, imwidth = image.shape[:2]
-        # monitor = get_monitors()[0]
 
-        # in case 1st monitor is tipped longways
-        # if monitor.height > monitor.width:
-            # monitor = get_monitors()[1]
-
-        monwidth, monheight = 1920, 930
+        monwidth, monheight = 1920, 900
 
         scale = 1
-        while imwidth > monwidth or imheight > monheight:
+        while imwidth//scale > monwidth or imheight//scale > monheight:
             scale += 1
-            imwidth, imheight = imwidth//scale, imheight//scale
 
-        # ImageCleaner.display_scale = scale
         return scale
 
     @staticmethod
     def draw(event, x, y, flags, param):
-        """Image drawing callback"""
+        """Image drawing callback."""
+
         # Scale x and y up to correct size for mask painting
         # (accounts for display image scaling)
         scale = ImageCleaner.display_scale
@@ -333,13 +353,20 @@ class ImageCleaner:
         ImageCleaner.preview = alpha_fg[:, :, axis] * ImageCleaner.image \
             + alpha_bg[:, :, axis] * ImageCleaner.background
 
+
 if __name__ == '__main__':
+
+    parser = ArgumentParser()
+    parser.add_argument('src', type=str, help='source folder')
+    parser.add_argument('dst', type=str, help='destination folder')
+
+    args = parser.parse_args()
 
     cleaner = ImageCleaner()
 
     cleaner.clean_folder(
-        src_folder='/media/hiltonjp/DATA/drawnet/extracted_art/avast_ye',
-        dst_folder='/media/hiltonjp/DATA/drawnet/cleaned_art/avast_ye'
+        src_folder=args.src,
+        dst_folder=args.dst
         # src_folder='/media/jeff/DATA/drawnet/sample',
         # dst_folder='/media/jeff/DATA/drawnet/cut'
     )
